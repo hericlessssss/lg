@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { GlassButton } from '../components/v0/glass-button';
@@ -9,12 +9,50 @@ import {
   CardHeader,
   CardTitle,
 } from '../components/v0/ui/card';
-import { Search, User, Swords, ShieldAlert } from 'lucide-react';
+import {
+  Search,
+  User,
+  Swords,
+  ShieldAlert,
+  Clock,
+  ScrollText,
+} from 'lucide-react';
+
+// Interface para evitar o erro de "any" do ESLint
+interface SearchHistory {
+  id: string;
+  query: string;
+  status: string;
+  created_at: string;
+  user_id: string;
+}
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [charName, setCharName] = useState('');
   const [searchResult, setSearchResult] = useState<string | null>(null);
+  const [history, setHistory] = useState<SearchHistory[]>([]);
+
+  // Função para buscar o histórico no Supabase
+  async function fetchHistory() {
+    try {
+      const { data, error } = await supabase
+        .from('search_history')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      setHistory((data as SearchHistory[]) || []);
+    } catch (error) {
+      console.error('Erro ao buscar histórico:', error);
+    }
+  }
+
+  // Carrega o histórico ao montar o componente
+  useEffect(() => {
+    fetchHistory();
+  }, []);
 
   async function handleLogout() {
     try {
@@ -27,13 +65,10 @@ export default function Dashboard() {
     }
   }
 
-  // Função de busca atualizada para salvar no banco de dados (Supabase)
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-
     const nameToSearch = charName.trim();
 
-    // 1. Validação: Não aceita campo vazio
     if (!nameToSearch) {
       alert('Por favor, digite o nome de um personagem.');
       setSearchResult(null);
@@ -41,7 +76,6 @@ export default function Dashboard() {
     }
 
     try {
-      // 2. Obtém o usuário logado para garantir o user_id correto (RLS)
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -51,19 +85,19 @@ export default function Dashboard() {
         return;
       }
 
-      // 3. Insere a busca na tabela search_history
       const { error } = await supabase.from('search_history').insert([
         {
           query: nameToSearch,
-          user_id: user.id, // O RLS valida se este ID é o do usuário atual
+          user_id: user.id,
           status: 'pending',
         },
       ]);
 
       if (error) throw error;
 
-      // 4. Sucesso: Atualiza o estado visual
       setSearchResult(nameToSearch);
+      setCharName(''); // Limpa o input
+      fetchHistory(); // Atualiza a lista instantaneamente
       console.log('Busca salva no histórico com sucesso!');
     } catch (error) {
       console.error('Erro ao salvar busca:', error);
@@ -113,7 +147,7 @@ export default function Dashboard() {
         </form>
       </section>
 
-      {/* Exibição do Resultado */}
+      {/* Exibição do Resultado Atual */}
       {searchResult && (
         <div className="animate-fade-in-up">
           <Card className="max-w-2xl mx-auto bg-black/60 border-[#d4af37]/40 backdrop-blur-md overflow-hidden">
@@ -145,16 +179,12 @@ export default function Dashboard() {
       <div className="grid gap-6 md:grid-cols-3">
         {[
           {
-            title: 'Personagens Monitorados',
-            value: '12',
+            title: 'Buscas Realizadas',
+            value: history.length.toString(),
             color: 'text-[#d4af37]',
           },
           { title: 'Alertas Ativos', value: '3', color: 'text-red-500' },
-          {
-            title: 'Última Verificação',
-            value: 'Há 2 min',
-            color: 'text-blue-400',
-          },
+          { title: 'Status do Banco', value: 'Online', color: 'text-blue-400' },
         ].map((item, i) => (
           <Card
             key={i}
@@ -173,6 +203,59 @@ export default function Dashboard() {
           </Card>
         ))}
       </div>
+
+      {/* TABELA DE HISTÓRICO */}
+      <Card className="bg-black/40 border-[#d4af37]/20 backdrop-blur-sm border">
+        <CardHeader className="border-b border-[#d4af37]/10">
+          <CardTitle className="flex items-center gap-2 text-[#d4af37] font-medieval tracking-widest">
+            <ScrollText className="h-5 w-5" />
+            Últimas Consultas
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-[#d4af37]/10 bg-[#d4af37]/5 text-[#c4b08a] text-xs uppercase">
+                  <th className="p-4">Personagem</th>
+                  <th className="p-4">Data/Hora</th>
+                  <th className="p-4 text-right">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.length > 0 ? (
+                  history.map((item) => (
+                    <tr
+                      key={item.id}
+                      className="border-b border-[#d4af37]/5 hover:bg-white/5 transition-colors"
+                    >
+                      <td className="p-4 font-bold text-white">{item.query}</td>
+                      <td className="p-4 text-sm text-[#c4b08a]/60 flex items-center gap-2">
+                        <Clock className="h-3 w-3" />
+                        {new Date(item.created_at).toLocaleString('pt-BR')}
+                      </td>
+                      <td className="p-4 text-right">
+                        <span className="px-2 py-1 rounded-full text-[10px] bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 uppercase tracking-tighter">
+                          {item.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={3}
+                      className="p-10 text-center text-[#c4b08a]/40 italic"
+                    >
+                      Nenhum histórico de busca encontrado.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
