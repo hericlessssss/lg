@@ -1,14 +1,13 @@
-'use client';
-
 import { Shield, Swords } from 'lucide-react';
 import { GlassButton } from './glass-button';
+import { useNavigate } from 'react-router-dom';
 
 export function HeroSection() {
+  const navigate = useNavigate();
   return (
     <section className="relative flex min-h-screen w-full flex-col items-center justify-center px-4 text-center bg-[url('/wallpaper.jpg')] bg-cover bg-center bg-no-repeat">
       {/* 1. Overlay de Escurecimento: bg-black/60 aplica 60% de opacidade preta */}
       <div className="absolute inset-0 bg-black/60 z-0" />
-
       {/* 2. Container do conteúdo com z-10 para ficar acima do overlay */}
       <div className="relative z-10 flex flex-col items-center gap-8">
         {/* Decorative top ornament */}
@@ -46,12 +45,19 @@ export function HeroSection() {
 
         {/* Buttons */}
         <div className="flex flex-col items-center gap-4 animate-fade-in-up-delay-2 sm:flex-row sm:gap-6">
-          <GlassButton variant="primary">Login</GlassButton>
-          <GlassButton variant="secondary">Cadastrar</GlassButton>
+          <GlassButton variant="primary" onClick={() => navigate('/login')}>
+            Login
+          </GlassButton>
+          <GlassButton
+            variant="secondary"
+            onClick={() => navigate('/register')}
+          >
+            Cadastrar
+          </GlassButton>
         </div>
-      </div>
-
-      {/* Bottom ornament (também com z-10 para não sumir atrás do overlay) */}
+      </div>{' '}
+      {/* Fechamento da div do container de conteúdo (z-10) */}
+      {/* Bottom ornament */}
       <div className="absolute bottom-8 z-10 flex items-center gap-3 opacity-40 animate-shimmer">
         <div className="h-px w-10 bg-[#d4af37]/30 sm:w-16" />
         <div className="h-1.5 w-1.5 rounded-full bg-[#d4af37]/50" />
