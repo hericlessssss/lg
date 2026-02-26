@@ -27,19 +27,48 @@ export default function Dashboard() {
     }
   }
 
-  // Função de busca com validação rigorosa contra campos vazios
-  function handleSearch(e: React.FormEvent) {
+  // Função de busca atualizada para salvar no banco de dados (Supabase)
+  async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
 
     const nameToSearch = charName.trim();
 
+    // 1. Validação: Não aceita campo vazio
     if (!nameToSearch) {
       alert('Por favor, digite o nome de um personagem.');
-      setSearchResult(null); // Garante que não mostre resultados antigos
+      setSearchResult(null);
       return;
     }
 
-    setSearchResult(nameToSearch);
+    try {
+      // 2. Obtém o usuário logado para garantir o user_id correto (RLS)
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        alert('Sessão expirada. Por favor, faça login novamente.');
+        return;
+      }
+
+      // 3. Insere a busca na tabela search_history
+      const { error } = await supabase.from('search_history').insert([
+        {
+          query: nameToSearch,
+          user_id: user.id, // O RLS valida se este ID é o do usuário atual
+          status: 'pending',
+        },
+      ]);
+
+      if (error) throw error;
+
+      // 4. Sucesso: Atualiza o estado visual
+      setSearchResult(nameToSearch);
+      console.log('Busca salva no histórico com sucesso!');
+    } catch (error) {
+      console.error('Erro ao salvar busca:', error);
+      alert('Ocorreu um erro ao salvar sua pesquisa no banco de dados.');
+    }
   }
 
   return (

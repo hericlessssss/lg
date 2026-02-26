@@ -11,7 +11,12 @@ interface GlassButtonProps {
   type?: 'button' | 'submit' | 'reset'; // Adicionada a prop type
 }
 
-export function GlassButton({ children, variant, onClick, type = 'button' }: GlassButtonProps) {
+export function GlassButton({
+  children,
+  variant,
+  onClick,
+  type = 'button',
+}: GlassButtonProps) {
   const isPrimary = variant === 'primary';
 
   return (
