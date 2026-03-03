@@ -66,9 +66,7 @@ const RashidTracker = () => {
         className="w-10 h-10 object-contain"
       />
       <div className="flex flex-col">
-        <span className="text-[8px] uppercase tracking-tighter text-[#d4af37]/60 font-bold">
-          
-        </span>
+        <span className="text-[8px] uppercase tracking-tighter text-[#d4af37]/60 font-bold"></span>
         <span
           className="text-xs text-[#f5e6c8] font-bold uppercase tracking-widest animate-pulse"
           style={{
@@ -168,15 +166,13 @@ function MainDashboard() {
     try {
       const apiData = await getCharacterData(nameToSearch);
       if (userId) {
-        await supabase
-          .from('search_history')
-          .insert([
-            {
-              query: nameToSearch,
-              user_id: userId,
-              status: apiData ? 'success' : 'not_found',
-            },
-          ]);
+        await supabase.from('search_history').insert([
+          {
+            query: nameToSearch,
+            user_id: userId,
+            status: apiData ? 'success' : 'not_found',
+          },
+        ]);
       }
       setSearchResult(apiData);
       setCharName('');
