@@ -1,6 +1,10 @@
-# Tibia Dashboard 🛡️
+# Tibia Scout 🛡️
 
-Um dashboard para consulta de personagens e notícias do Tibia, integrado com Supabase para histórico de buscas.
+Um dashboard moderno para consulta de personagens e notícias do Tibia, integrado com Supabase para histórico de buscas em tempo real.
+
+## 🚀 Demonstração Online
+Acesse o projeto rodando em tempo real:
+**[https://tibia-scout-luizgustavolabs-projects.vercel.app](https://tibia-scout-luizgustavolabs-projects.vercel.app)**
 
 ## 🚀 Como começar
 
@@ -17,17 +21,22 @@ Você vai precisar de:
 
 1.  **Clone o repositório:**
     ```bash
-    git clone [https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git](https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git)
+    git clone [https://github.com/hericlessssss/lg.git](https://github.com/hericlessssss/lg.git)
     ```
 
 2.  **Entre na pasta do projeto:**
     ```bash
-    cd SEU_NOME_DA_PASTA
+    cd lg
     ```
 
 3.  **Instale as dependências:**
     ```bash
     npm install
+    ```
+
+4.  **Inicie o servidor de desenvolvimento:**
+    ```bash
+    npm run dev
     ```
 
 ### 🔑 Configuração das Variáveis de Ambiente
