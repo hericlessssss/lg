@@ -34,6 +34,7 @@ import {
   Filter,
   Zap,
   Clock,
+  ArrowUpDown,
 } from 'lucide-react';
 
 interface SearchHistory {
@@ -46,17 +47,24 @@ interface SearchHistory {
 
 const RashidTracker = () => {
   const rashidLocations: { [key: number]: string } = {
-    0: 'Carlin',
-    1: 'Svargrond',
-    2: 'Liberty Bay',
-    3: 'Port Hope',
-    4: 'Ankrahmun',
-    5: 'Darashia',
-    6: 'Edron',
+    0: 'Carlin', // Domingo (após as 06h)
+    1: 'Svargrond', // Segunda
+    2: 'Liberty Bay', // Terça
+    3: 'Port Hope', // Quarta
+    4: 'Ankrahmun', // Quinta
+    5: 'Darashia', // Sexta
+    6: 'Edron', // Sábado
   };
 
-  const today = new Date().getDay();
-  const currentCity = rashidLocations[today];
+  const getCurrentTibiaDay = () => {
+    const now = new Date();
+    // Subtraímos 6 horas da hora atual.
+    // Se forem 05:00 da manhã, o cálculo retrocede para 23:00 do dia anterior.
+    const tibiaTime = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+    return tibiaTime.getDay();
+  };
+
+  const currentCity = rashidLocations[getCurrentTibiaDay()];
 
   return (
     <div className="flex items-center gap-3 bg-black/40 backdrop-blur-md p-2 px-4 rounded-xl border border-[#d4af37]/30">
@@ -66,7 +74,9 @@ const RashidTracker = () => {
         className="w-10 h-10 object-contain"
       />
       <div className="flex flex-col">
-        <span className="text-[8px] uppercase tracking-tighter text-[#d4af37]/60 font-bold"></span>
+        <span className="text-[8px] uppercase tracking-tighter text-[#d4af37]/60 font-bold">
+          Localização (Pós-SS)
+        </span>
         <span
           className="text-xs text-[#f5e6c8] font-bold uppercase tracking-widest animate-pulse"
           style={{
@@ -97,6 +107,9 @@ function MainDashboard() {
   );
   const [showFilters, setShowFilters] = useState(false);
   const [nicknameFilter, setNicknameFilter] = useState('');
+  const [sortBy, setSortBy] = useState<
+    'price_asc' | 'price_desc' | 'level_desc' | 'skill_desc'
+  >('price_asc');
   const [bazaarFilters, setBazaarFilters] = useState({
     vocation: 'all',
     pvp_type: 'all',
@@ -110,10 +123,38 @@ function MainDashboard() {
   });
 
   const filteredBazaar = useMemo(() => {
-    return bazaar.filter((item) =>
-      item.name.toLowerCase().includes(nicknameFilter.toLowerCase()),
-    );
-  }, [bazaar, nicknameFilter]);
+    return bazaar
+      .filter((item) =>
+        item.name.toLowerCase().includes(nicknameFilter.toLowerCase()),
+      )
+      .sort((a, b) => {
+        if (sortBy === 'price_asc') return (a.price || 0) - (b.price || 0);
+        if (sortBy === 'price_desc') return (b.price || 0) - (a.price || 0);
+        if (sortBy === 'level_desc') return (b.level || 0) - (a.level || 0);
+        if (sortBy === 'skill_desc') {
+          const maxA = Math.max(
+            a.skills?.magic || 0,
+            a.skills?.distance || 0,
+            a.skills?.sword || 0,
+            a.skills?.axe || 0,
+            a.skills?.club || 0,
+            a.skills?.fist || 0, // Adicionado Fist
+            a.skills?.shielding || 0, // Adicionado Shielding
+          );
+          const maxB = Math.max(
+            b.skills?.magic || 0,
+            b.skills?.distance || 0,
+            b.skills?.sword || 0,
+            b.skills?.axe || 0,
+            b.skills?.club || 0,
+            b.skills?.fist || 0, // Adicionado Fist
+            b.skills?.shielding || 0, // Adicionado Shielding
+          );
+          return maxB - maxA;
+        }
+        return 0;
+      });
+  }, [bazaar, nicknameFilter, sortBy]);
 
   async function fetchHistory() {
     try {
@@ -198,26 +239,26 @@ function MainDashboard() {
     }
   }
 
-  async function handleShowBazaar(filters = bazaarFilters) {
-    setViewMode('bazaar');
-    setSearchResult(null);
+  const handleShowBazaar = async () => {
     setIsLoading(true);
+    console.log(
+      'Iniciando busca no Bazaar... Isso pode levar até 30 segundos.',
+    );
     try {
-      const cleanFilters = {
-        ...filters,
-        min_level: filters.min_level ? Number(filters.min_level) : undefined,
-        max_level: filters.max_level ? Number(filters.max_level) : undefined,
-        min_skill: filters.min_skill ? Number(filters.min_skill) : undefined,
-        max_skill: filters.max_skill ? Number(filters.max_skill) : undefined,
-      };
-      const data = await getTibiaBazaar(cleanFilters);
+      const data = await getTibiaBazaar(bazaarFilters);
+      if (data.length === 0) {
+        alert(
+          'A Biblioteca Real está ocupada ou não encontrou resultados. Tente novamente em instantes.',
+        );
+      }
       setBazaar(data);
+      setViewMode('bazaar');
     } catch (error) {
-      console.error(error);
+      console.error('Erro ao carregar Bazaar:', error);
     } finally {
       setIsLoading(false);
     }
-  }
+  };
 
   const handleToggleFavorite = async (name: string) => {
     if (!userId) return;
@@ -372,7 +413,6 @@ function MainDashboard() {
                     <option value="monk">Monk</option>
                   </select>
                 </div>
-
                 <div className="space-y-1">
                   <label className="text-[9px] uppercase text-[#d4af37]/70">
                     Tipo de PvP
@@ -394,7 +434,6 @@ function MainDashboard() {
                     <option value="hardcore">Hardcore</option>
                   </select>
                 </div>
-
                 <div className="space-y-1">
                   <label className="text-[9px] uppercase text-[#d4af37]/70">
                     BattlEye
@@ -414,7 +453,6 @@ function MainDashboard() {
                     <option value="yellow">Amarelo</option>
                   </select>
                 </div>
-
                 <div className="space-y-1">
                   <label className="text-[9px] uppercase text-[#d4af37]/70">
                     Level Range
@@ -446,7 +484,6 @@ function MainDashboard() {
                     />
                   </div>
                 </div>
-
                 <div className="space-y-1">
                   <label className="text-[9px] uppercase text-[#d4af37]/70">
                     Skill Range
@@ -467,6 +504,9 @@ function MainDashboard() {
                       <option value="sword">Sword</option>
                       <option value="axe">Axe</option>
                       <option value="club">Club</option>
+                      <option value="fist">Fist</option> {/* Nova Opção */}
+                      <option value="shielding">Shield</option>{' '}
+                      {/* Nova Opção */}
                     </select>
                     <Input
                       placeholder="Min"
@@ -492,7 +532,6 @@ function MainDashboard() {
                     />
                   </div>
                 </div>
-
                 <div className="space-y-1">
                   <label className="text-[9px] uppercase text-[#d4af37]/70">
                     Localização
@@ -514,7 +553,6 @@ function MainDashboard() {
                   </select>
                 </div>
               </div>
-
               <GlassButton
                 variant="primary"
                 className="w-full mt-6 py-2 h-auto text-xs"
@@ -524,14 +562,29 @@ function MainDashboard() {
               </GlassButton>
             </div>
 
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#d4af37]/50" />
-              <Input
-                placeholder="Filtrar por nickname nos resultados..."
-                value={nicknameFilter}
-                onChange={(e) => setNicknameFilter(e.target.value)}
-                className="pl-10 bg-black/40 border-[#d4af37]/20 text-xs h-9"
-              />
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#d4af37]/50" />
+                <Input
+                  placeholder="Filtrar por nickname nos resultados..."
+                  value={nicknameFilter}
+                  onChange={(e) => setNicknameFilter(e.target.value)}
+                  className="pl-10 bg-black/40 border-[#d4af37]/20 text-xs h-9"
+                />
+              </div>
+              <div className="flex items-center gap-2 bg-black/40 border border-[#d4af37]/20 rounded px-2 h-9">
+                <ArrowUpDown size={14} className="text-[#d4af37]/60" />
+                <select
+                  value={sortBy}
+                  onChange={(e: any) => setSortBy(e.target.value)}
+                  className="bg-transparent text-[10px] text-[#f5e6c8] outline-none cursor-pointer uppercase font-bold"
+                >
+                  <option value="price_asc">Menor Preço</option>
+                  <option value="price_desc">Maior Preço</option>
+                  <option value="level_desc">Maior Level</option>
+                  <option value="skill_desc">Melhor Skill</option>
+                </select>
+              </div>
             </div>
 
             <div className="grid gap-4">
@@ -539,63 +592,94 @@ function MainDashboard() {
                 filteredBazaar.map((item, idx) => (
                   <Card
                     key={idx}
-                    className="bg-black/60 border-[#d4af37]/30 backdrop-blur-md hover:border-[#d4af37]/60 transition-all group overflow-hidden"
+                    className="bg-black/80 border-[#d4af37]/30 backdrop-blur-md hover:border-[#d4af37]/80 transition-all duration-300 group overflow-hidden shadow-lg hover:shadow-[#d4af37]/10"
                   >
                     <CardContent className="p-0 flex flex-col md:flex-row">
-                      <div className="p-4 flex items-center gap-4 flex-1">
-                        <div className="relative bg-white/5 p-2 rounded-lg border border-[#d4af37]/10">
-                          <img
-                            src={item.outfit_url}
-                            alt=""
-                            className="h-14 w-14 object-contain"
-                          />
-                          <div className="absolute -top-2 -left-2 bg-[#d4af37] text-black text-[8px] px-1 font-bold rounded-sm">
+                      <div className="p-4 flex items-center gap-5 flex-1">
+                        <div className="relative bg-gradient-to-b from-[#d4af37]/20 to-transparent p-1 rounded-lg border border-[#d4af37]/20 group-hover:border-[#d4af37]/50 transition-colors">
+                          <div className="bg-black/40 rounded-md p-1">
+                            <img
+                              src={item.outfit_url || '/placeholder_outfit.png'}
+                              alt=""
+                              className="h-16 w-16 object-contain drop-shadow-[0_0_8px_rgba(212,175,55,0.3)]"
+                            />
+                          </div>
+                          <div className="absolute -top-2 -left-2 bg-[#d4af37] text-black text-[9px] px-1.5 py-0.5 font-bold rounded shadow-md border border-black/20">
                             LV {item.level}
                           </div>
                         </div>
                         <div className="flex-1">
-                          <h4 className="text-white font-bold group-hover:text-[#d4af37] transition-colors flex items-center gap-2">
-                            {item.name}
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="text-white font-bold text-base group-hover:text-[#d4af37] transition-colors">
+                              {item.name}
+                            </h4>
                             {item.battleye_status === 'green' && (
-                              <Zap size={12} className="text-green-400" />
-                            )}
-                          </h4>
-                          <p className="text-[10px] text-[#c4b08a]">
-                            {item.vocation} • {item.world}
-                          </p>
-                          <div className="flex gap-2 mt-2">
-                            {['axe', 'distance', 'magic'].map((skill) => (
-                              <div
-                                key={skill}
-                                className="bg-black/40 px-2 py-1 rounded border border-white/5 flex flex-col items-center min-w-[40px]"
-                              >
-                                <span className="text-[7px] uppercase opacity-50">
-                                  {skill}
+                              <div className="flex items-center gap-1 bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20">
+                                <Zap
+                                  size={10}
+                                  className="text-green-400 fill-green-400"
+                                />
+                                <span className="text-[8px] text-green-400 font-bold uppercase">
+                                  G-BE
                                 </span>
-                                <span className="text-[10px] font-bold text-[#d4af37]">
-                                  {item.skills?.[skill] || '--'}
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-[#c4b08a]/80 font-medium tracking-wide uppercase">
+                            {item.vocation}{' '}
+                            <span className="mx-1 opacity-30">•</span>{' '}
+                            {item.world}
+                          </p>
+                          <div className="flex gap-1.5 mt-3 flex-wrap">
+                            {[
+                              { label: 'ML', key: 'magic' },
+                              { label: 'DIS', key: 'distance' },
+                              { label: 'SWO', key: 'sword' },
+                              { label: 'AXE', key: 'axe' },
+                              { label: 'CLU', key: 'club' },
+                              { label: 'FIS', key: 'fist' },
+                              { label: 'SHI', key: 'shielding' }, // Certifique-se que aqui é 'shielding' e não 'shi'
+                            ].map((s) => (
+                              <div
+                                key={s.key}
+                                className="bg-black/40 px-2 py-1 rounded border border-[#d4af37]/10 flex flex-col items-center min-w-[38px] group-hover:border-[#d4af37]/30 transition-colors"
+                              >
+                                <span className="text-[7px] uppercase text-[#c4b08a] opacity-60 font-bold">
+                                  {s.label}
+                                </span>
+                                <span className="text-[10px] font-bold text-white leading-none mt-0.5">
+                                  {/* Adicionei o Number() para garantir que trate zeros corretamente */}
+                                  {item.skills &&
+                                  item.skills[s.key] !== undefined
+                                    ? item.skills[s.key]
+                                    : '--'}
                                 </span>
                               </div>
                             ))}
                           </div>
                         </div>
                       </div>
-                      <div className="bg-[#d4af37]/5 p-4 flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-2 border-t md:border-t-0 md:border-l border-[#d4af37]/10 min-w-[140px]">
-                        <div className="text-right">
-                          <p className="text-[8px] uppercase tracking-tighter opacity-60">
+                      <div className="bg-[#d4af37]/5 p-4 flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-3 border-t md:border-t-0 md:border-l border-[#d4af37]/10 min-w-[160px] relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-br from-[#d4af37]/5 to-transparent pointer-events-none" />
+                        <div className="text-right z-10">
+                          <p className="text-[9px] uppercase tracking-widest text-[#d4af37]/60 font-bold mb-1">
                             Lance Atual
                           </p>
-                          <div className="flex items-center gap-1 text-[#d4af37] font-bold text-lg">
-                            <Coins size={16} /> {item.bid.toLocaleString()}
+                          <div className="flex items-center gap-1.5 text-[#d4af37] font-black text-xl drop-shadow-sm">
+                            <Coins size={18} className="text-[#d4af37]" />{' '}
+                            {(item.price || 0).toLocaleString()}
                           </div>
                         </div>
-                        <div className="flex flex-col gap-1 items-end">
-                          <span className="text-[9px] text-white/70 uppercase">
-                            {item.location}
-                          </span>
-                          <div className="text-[9px] text-[#c4b08a] flex items-center gap-1">
-                            <Clock size={10} />{' '}
-                            {item.auction_end_relative || 'Finalizando'}
+                        <div className="flex flex-col gap-1.5 items-end z-10">
+                          <div className="flex items-center gap-1 bg-black/40 px-2 py-0.5 rounded border border-[#d4af37]/10">
+                            <Globe size={10} className="text-[#c4b08a]" />
+                            <span className="text-[9px] text-white/80 font-bold uppercase tracking-tighter">
+                              {item.location || 'Global'}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-[#c4b08a] flex items-center gap-1.5 font-medium">
+                            <Clock size={11} className="text-[#d4af37]" />{' '}
+                            {item.auction_end_relative || 'Finalizando...'}
                           </div>
                         </div>
                       </div>
@@ -603,8 +687,10 @@ function MainDashboard() {
                   </Card>
                 ))
               ) : (
-                <div className="text-center py-10 opacity-40 italic text-xs">
-                  Nenhum leilão encontrado.
+                <div className="text-center py-16 bg-black/20 rounded-xl border border-dashed border-[#d4af37]/20">
+                  <p className="opacity-40 italic text-sm text-[#c4b08a]">
+                    Nenhum leilão encontrado nas bibliotecas reais.
+                  </p>
                 </div>
               )}
             </div>
