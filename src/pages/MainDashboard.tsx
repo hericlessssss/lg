@@ -371,6 +371,7 @@ function MainDashboard() {
                           <option value="Paladin">Paladin</option>
                           <option value="Sorcerer">Sorcerer</option>
                           <option value="Druid">Druid</option>
+                          <option value="Monk">Monk</option>
                         </select>
                       </div>
                       <div className="space-y-1">
