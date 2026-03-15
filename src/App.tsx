@@ -17,7 +17,6 @@ function App() {
             <Route path="login" element={<Login />} />
             <Route path="register" element={<Register />} />
 
-            {/* Nova rota para redefinição de senha */}
             <Route path="reset-password" element={<ResetPassword />} />
 
             <Route

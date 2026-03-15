@@ -45,11 +45,11 @@ export default function Dashboard() {
         }
     }
     const openLink = (url) => {
-        // Reset inicial
+        
         setActiveUrl(url);
         setIframeBlocked(false);
         setIsLoading(true);
-        // Espera 0.5s mostrando o Loader antes de exibir a mensagem de bloqueio
+        
         setTimeout(() => {
             setIframeBlocked(true);
             setIsLoading(false);

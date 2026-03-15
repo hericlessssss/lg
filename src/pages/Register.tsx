@@ -27,7 +27,6 @@ export default function Register() {
         email,
         password,
         options: {
-          // Ajuste para a sua URL oficial do Vercel
           emailRedirectTo: 'https://tibia-scout.vercel.app/login',
         },
       });

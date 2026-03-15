@@ -1,4 +1,4 @@
-import { supabase } from './supabase'; // Ajuste o caminho se necessário
+import { supabase } from './supabase';
 
 export const getFavorites = async (userId: string) => {
   const { data, error } = await supabase
